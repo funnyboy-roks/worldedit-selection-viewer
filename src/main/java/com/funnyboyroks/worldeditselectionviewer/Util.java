@@ -1,5 +1,7 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
@@ -9,6 +11,11 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.concurrent.CompletableFuture;
 
 public class Util {
 
@@ -32,12 +39,49 @@ public class Util {
         return sel;
     }
 
-    static Location asLocation(BlockVector3 vec, World world) {
+    public static Location asLocation(BlockVector3 vec, World world) {
         return new Location(
             world,
             vec.getBlockX(),
             vec.getBlockY(),
             vec.getBlockZ()
         );
+    }
+
+    public static CompletableFuture<Boolean> isLatestVersion() {
+
+        int serverVersion = Integer.parseInt(
+            WorldeditSelectionViewer.instance
+                .getDescription()
+                .getVersion()
+                .replaceAll("\\.|-SNAPSHOT|v", "")
+        );
+
+        return CompletableFuture.supplyAsync(() -> {
+
+            try {
+                URL url = new URL("https://api.modrinth.com/v2/project/K9JIhdio");
+                InputStreamReader reader = new InputStreamReader(url.openStream());
+                JsonArray versions = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonArray("versions");
+                String version = versions.get(versions.size() - 1).getAsString();
+
+                url = new URL("https://api.modrinth.com/v2/version/" + version);
+                reader = new InputStreamReader(url.openStream());
+                int latestVersion = Integer.parseInt(
+                    JsonParser.parseReader(reader)
+                        .getAsJsonObject()
+                        .get("version_number")
+                        .getAsString()
+                        .replaceAll("\\.|-SNAPSHOT|v", "")
+                );
+                WorldeditSelectionViewer.instance.getLogger().info("Latest Version: " + latestVersion);
+
+                return latestVersion <= serverVersion;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+
     }
 }
