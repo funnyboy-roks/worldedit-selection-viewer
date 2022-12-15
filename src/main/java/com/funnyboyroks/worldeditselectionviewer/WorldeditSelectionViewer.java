@@ -1,6 +1,7 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
 import com.funnyboyroks.drawlib.renderer.ShapeRenderer;
+import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.regions.Region;
 import org.bstats.bukkit.Metrics;
@@ -36,17 +37,27 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
             throw new RuntimeException(e);
         }
 
-        Material wandMaterial = Material.matchMaterial(worldedit.getConfiguration().wandItem);
+//        Material wandMaterial = Material.matchMaterial(worldedit.getConfiguration().wandItem);
         ShapeRenderer renderer = new ShapeRenderer();
         renderer.setColor(Color.YELLOW);
         renderer.setForceShow(true);
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(instance, () -> {
+        Bukkit.getScheduler().scheduleAsyncRepeatingTask(instance, () -> {
 
             Bukkit.getOnlinePlayers().forEach(p -> {
 
                 if (!p.hasPermission("worldedit-selection-viewer.view")) return;
 
-                if (p.getInventory().getItemInMainHand().getType() != wandMaterial && p.getInventory().getItemInOffHand().getType() != wandMaterial) {
+                LocalSession session = Util.getSession(p);
+                if (session == null) return;
+
+                Material wandMaterial = Material.matchMaterial(session.getWandItem());
+
+                if (wandMaterial == null) return;
+
+                if (
+                    p.getInventory().getItemInMainHand().getType() != wandMaterial // Main Hand
+                    && p.getInventory().getItemInOffHand().getType() != wandMaterial // Offhand
+                ) {
                     return;
                 }
 

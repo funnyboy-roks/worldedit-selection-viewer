@@ -20,10 +20,9 @@ import java.util.concurrent.CompletableFuture;
 public class Util {
 
     public static Region getSelection(@NotNull Player player) {
-        com.sk89q.worldedit.entity.Player worldeditPlayer = BukkitAdapter.adapt(player);
-        if (worldeditPlayer == null) return null;
 
-        LocalSession session = WorldeditSelectionViewer.worldedit.getSessionManager().get(worldeditPlayer);
+        LocalSession session = Util.getSession(player);
+
         if (session == null) return null;
 
         Region sel;
@@ -37,6 +36,14 @@ public class Util {
         if (!BukkitAdapter.asBukkitWorld(sel.getWorld()).getWorld().equals(player.getWorld())) return null;
 
         return sel;
+    }
+
+    public static LocalSession getSession(Player player) {
+
+        com.sk89q.worldedit.entity.Player worldeditPlayer = BukkitAdapter.adapt(player);
+        if (worldeditPlayer == null) return null;
+
+        return WorldeditSelectionViewer.worldedit.getSessionManager().get(worldeditPlayer);
     }
 
     public static Location asLocation(BlockVector3 vec, World world) {
