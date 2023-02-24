@@ -2,7 +2,6 @@ name: worldedit-selection-viewer
 version: '${project.version}'
 main: com.funnyboyroks.worldeditselectionviewer.WorldeditSelectionViewer
 api-version: 1.19
-loadbefore: [ 'WorldEdit' ]
 depend: [ 'WorldEdit' ]
 author: funnyboy_roks
 permissions:

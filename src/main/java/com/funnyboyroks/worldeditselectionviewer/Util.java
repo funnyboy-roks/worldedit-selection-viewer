@@ -81,7 +81,6 @@ public class Util {
                         .getAsString()
                         .replaceAll("\\.|-SNAPSHOT|v", "")
                 );
-                WorldeditSelectionViewer.instance.getLogger().info("Latest Version: " + latestVersion);
 
                 return latestVersion <= serverVersion;
             } catch (IOException e) {
