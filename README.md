@@ -1,10 +1,9 @@
 # WorldEdit Selection Viewer
 
-A very simple plugin that adds particle borders for viewing one's
+A simple plugin with no config that adds particle borders for viewing one's
 selected [WorldEdit](https://enginehub.org/worldedit) region.
 
 ![screenshot](https://raw.githubusercontent.com/funnyboy-roks/worldedit-selection-viewer/main/img/screenshot.png)
-
 
 ## Setup
 
