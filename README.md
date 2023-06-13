@@ -13,15 +13,15 @@ selected [WorldEdit](https://enginehub.org/worldedit) region.
 
 ## Commands
 
-`/wesv colour <colour|#hex>` - Change the colour of the selection border
-`/wesv visibility <always|never|holding-tool>` - Change when the selection is visible
+- `/wesv colour <colour|#hex>` - Change the colour of the selection border
+- `/wesv visibility <always|never|holding-tool>` - Change when the selection is visible
     - `always` - Always show the selection
     - `never` - Never show the selection
     - `holding-tool` - Show the selection when holding the select tool (default: Wooden Axe)
 
 ## Permissions
 
-`worldedit-selection-viewer.view` - If the player can see the borders
+- `worldedit-selection-viewer.view` - If the player can see the borders
     - Default: Enabled for all players
-`worldedit-selection-viewer.command` - If the player can run the `/wesv` command
+- `worldedit-selection-viewer.command` - If the player can run the `/wesv` command
     - Default: Enabled for all players
