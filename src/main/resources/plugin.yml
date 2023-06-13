@@ -6,7 +6,7 @@ depend: [ 'WorldEdit' ]
 author: funnyboy_roks
 commands:
   wesv:
-    usage: "/wesv <colour> [...args]"
+    usage: "§cUsage: /wesv <visibility|colour> [...args]"
     permission: worldedit-selection-viewer.command
 permissions:
   worldedit-selection-viewer:

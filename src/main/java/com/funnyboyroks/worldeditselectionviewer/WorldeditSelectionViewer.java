@@ -1,6 +1,7 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
 import com.funnyboyroks.drawlib.renderer.ShapeRenderer;
+import com.funnyboyroks.worldeditselectionviewer.CommandWESV.Visibility;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.regions.Region;
@@ -21,11 +22,13 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
     public static WorldEdit                worldedit;
 
     public static NamespacedKey colourKey;
+    public static NamespacedKey visKey;
 
     public WorldeditSelectionViewer() {
         instance = this;
         worldedit = WorldEdit.getInstance();
         colourKey = NamespacedKey.fromString("selection-colour", this);
+        visKey = NamespacedKey.fromString("selection-visibility", this);
     }
 
     @Override
@@ -48,16 +51,35 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
         ShapeRenderer defaultRenderer = new ShapeRenderer();
         defaultRenderer.setColor(Color.YELLOW);
         defaultRenderer.setForceShow(true);
-        Bukkit.getScheduler().scheduleAsyncRepeatingTask(instance, () -> {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(instance, () -> {
 
             Bukkit.getOnlinePlayers().forEach(p -> {
                 ShapeRenderer renderer = defaultRenderer;
 
                 if (!p.hasPermission("worldedit-selection-viewer.view")) return;
+
                 PersistentDataContainer pdc = p.getPersistentDataContainer();
+                Visibility vis;
+                if (pdc.has(visKey)) {
+                    String str = pdc.get(visKey, PersistentDataType.STRING);
+                    try {
+                        vis = Visibility.valueOf(str);
+                    } catch (IllegalArgumentException ex) {
+                        this.getLogger().warning("Visibility invalid: " + str);
+                        return;
+                    }
+                } else {
+                    vis = Visibility.HOLDING_TOOL;
+                }
+
+                if (vis == Visibility.NEVER) {
+                    return;
+                }
+
                 if (pdc.has(colourKey)) {
                     renderer = new ShapeRenderer();
                     renderer.setForceShow(true);
+                    // Null doesn't matter because we check it above
                     Color colour = Util.colourFromString(pdc.get(colourKey, PersistentDataType.STRING));
                     if (colour == null) {
                         this.getLogger().warning("Colour invalid: " + pdc.get(colourKey, PersistentDataType.STRING));
@@ -70,15 +92,24 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
                 if (session == null) return;
 
-                Material wandMaterial = Material.matchMaterial(session.getWandItem());
 
-                if (wandMaterial == null) return;
+                if (vis == Visibility.HOLDING_TOOL) {
+                    Material wandMaterial;
 
-                if (
-                    p.getInventory().getItemInMainHand().getType() != wandMaterial // Main Hand
-                    && p.getInventory().getItemInOffHand().getType() != wandMaterial // Offhand
-                ) {
-                    return;
+                    try {
+                        wandMaterial = Material.matchMaterial(session.getWandItem());
+                    } catch (NullPointerException ex) { // Somehow, an NPE within WE causes this, so let's just default
+                        wandMaterial = Material.WOODEN_AXE;
+                    }
+
+                    if (wandMaterial == null) return;
+
+                    if (
+                        p.getInventory().getItemInMainHand().getType() != wandMaterial // Main Hand
+                        && p.getInventory().getItemInOffHand().getType() != wandMaterial // Offhand
+                    ) {
+                        return;
+                    }
                 }
 
                 Region sel = Util.getSelection(p);

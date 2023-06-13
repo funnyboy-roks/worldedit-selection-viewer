@@ -1,5 +1,6 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.sk89q.worldedit.IncompleteRegionException;
@@ -16,59 +17,61 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.AbstractMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class Util {
+    public static final Map<String, Color> COLOUR_MAP = ImmutableMap.<String, Color>builder()
+        .put("WHITE", Color.WHITE)
+        .put("SILVER", Color.SILVER)
+        .put("GRAY", Color.GRAY)
+        .put("BLACK", Color.BLACK)
+        .put("RED", Color.RED)
+        .put("MAROON", Color.MAROON)
+        .put("YELLOW", Color.YELLOW)
+        .put("OLIVE", Color.OLIVE)
+        .put("LIME", Color.LIME)
+        .put("GREEN", Color.GREEN)
+        .put("AQUA", Color.AQUA)
+        .put("TEAL", Color.TEAL)
+        .put("BLUE", Color.BLUE)
+        .put("NAVY", Color.NAVY)
+        .put("FUCHSIA", Color.FUCHSIA)
+        .put("PURPLE", Color.PURPLE)
+        .put("ORANGE", Color.ORANGE)
+        .build();
 
-    public static final String[] COLOURS = {
-        "WHITE",
-        "SILVER",
-        "GRAY",
-        "BLACK",
-        "RED",
-        "MAROON",
-        "YELLOW",
-        "OLIVE",
-        "LIME",
-        "GREEN",
-        "AQUA",
-        "TEAL",
-        "BLUE",
-        "NAVY",
-        "FUCHSIA",
-        "PURPLE",
-        "ORANGE",
-        };
+    // The same as COLOUR_MAP, but the value and key are flipped
+    // This has no conflicts, because no two keys have the same value
+    private static final Map<Color, String> REV_COLOUR_MAP = COLOUR_MAP
+        .entrySet()
+        .stream()
+        .collect(Collectors.toUnmodifiableMap(Map.Entry::getValue, Map.Entry::getKey));
+
+    public static final String[] COLOURS = COLOUR_MAP.keySet().toArray(new String[0]);
 
     public static Color colourFromString(String str) {
         if (str.startsWith("#")) {
             str = str.substring(1);
             return Color.fromRGB(Integer.parseInt(str, 16));
         }
-        // This physically pains me :'(
-        return switch (str.toUpperCase()) {
-            case "WHITE" -> Color.WHITE;
-            case "SILVER" -> Color.SILVER;
-            case "GRAY" -> Color.GRAY;
-            case "BLACK" -> Color.BLACK;
-            case "RED" -> Color.RED;
-            case "MAROON" -> Color.MAROON;
-            case "YELLOW" -> Color.YELLOW;
-            case "OLIVE" -> Color.OLIVE;
-            case "LIME" -> Color.LIME;
-            case "GREEN" -> Color.GREEN;
-            case "AQUA" -> Color.AQUA;
-            case "TEAL" -> Color.TEAL;
-            case "BLUE" -> Color.BLUE;
-            case "NAVY" -> Color.NAVY;
-            case "FUCHSIA" -> Color.FUCHSIA;
-            case "PURPLE" -> Color.PURPLE;
-            case "ORANGE" -> Color.ORANGE;
-            default -> null;
-        };
+
+        return COLOUR_MAP.getOrDefault(str.toUpperCase(), null);
     }
 
     public static String colourToString(Color col) {
+        String named = REV_COLOUR_MAP.get(col);
+        if (named == null) {
+            return colourToHex(col);
+        } else {
+            return named.toLowerCase();
+        }
+    }
+
+    public static String colourToHex(Color col) {
         return "#%06x".formatted(col.asRGB());
     }
 
@@ -137,10 +140,21 @@ public class Util {
 
                 return latestVersion <= serverVersion;
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                WorldeditSelectionViewer.instance
+                    .getLogger()
+                    .severe("Unable to contact Modrinth API to check version!");
+                return true;
             }
         });
 
 
+    }
+
+    public static String fromEnumString(String str) {
+        return str.toLowerCase().replace('_', '-');
+    }
+
+    public static String toEnumString(String str) {
+        return str.toUpperCase().replace('-', '_');
     }
 }
