@@ -1,5 +1,11 @@
 # User-specific stuff
 .idea/
+.vscode/
+sandbox/.env
+sandbox/compose.yml
+sandbox/last.log
+sandbox/plugins
+sandbox/data-*
 
 *.iml
 *.ipr
