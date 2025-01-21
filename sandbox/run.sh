@@ -28,6 +28,24 @@ function down()
 }
 
 # ---------------------------------------------------------
+# check MCID
+# ---------------------------------------------------------
+function checkMCID()
+{
+  if [[ "${1}" =~ ^\. ]]; then
+    echo "Bedrock player"
+    return 0
+  fi
+  local -r JSON=$(curl -s "https://api.mojang.com/users/profiles/minecraft/${1}")
+  if [[ "${JSON}" =~ "\"id\" :" ]]; then
+    echo "Java player"
+    return 0
+  fi
+  echo "Player \"${1}\" does not found."
+  return 1
+}
+
+# ---------------------------------------------------------
 # clean
 # ---------------------------------------------------------
 if [ "${1}" = "clean" ]; then
@@ -40,7 +58,7 @@ if [ "${1}" = "clean" ]; then
 fi
 
 # ---------------------------------------------------------
-# default
+# default parameters (do not edit)
 # ---------------------------------------------------------
 if [ -f /etc/timezone ]; then
   DEFAULT_TZ="$(cat /etc/timezone)"
@@ -51,15 +69,19 @@ DEFAULT_TAG="latest"
 DEFAULT_NAME="sandbox"
 DEFAULT_TYPE="paper"
 DEFAULT_VERSION="latest"
-DEFAULT_MODRINTH="viaversion,viabackwards,worldedit:beta"
+DEFAULT_MODRINTH="viaversion,viabackwards,worldedit:beta,geyser:beta"
+DEFAULT_MODS="https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"
 DEFAULT_PORT="25565"
+DEFAULT_PORT_BE="19132"
 
 # ---------------------------------------------------------
-# make compose.yml
+# generate compose.yml file
 # ---------------------------------------------------------
 if [ ! -f compose.yml ]; then
-  echo "make ... compose.yml"
+  echo "Making ... compose.yml"
   cat - << COMPOSE_EOF > compose.yml
+# This is an automatically generated file.
+# You can edit it as needed.
 services:
   mc:
     image: "itzg/minecraft-server:\${S_TAG:-${DEFAULT_TAG}}"
@@ -72,9 +94,11 @@ services:
       MODE: "creative"
       FORCE_GAMEMODE: "true"
       MODRINTH_PROJECTS: "\${S_MODRINTH:-${DEFAULT_MODRINTH}}"
+      MODS: "\${S_MODS:-${DEFAULT_MODS}}"
       RCON_CMDS_STARTUP: "\${S_OPERATOR}"
     ports:
       - "\${S_PORT:-${DEFAULT_PORT}}:25565"
+      - "\${S_PORT_BE:-${DEFAULT_PORT_BE}}:19132/udp"
     volumes:
       - ./data-\${S_TYPE:-${DEFAULT_TYPE}}-\${S_VERSION:-${DEFAULT_VERSION}}:/data
       - ./plugins:/plugins:ro
@@ -82,23 +106,66 @@ COMPOSE_EOF
 fi
 
 # ---------------------------------------------------------
-# make .env
+# generate .env file
 # ---------------------------------------------------------
 if [ ! -f .env ]; then
-  echo "make ... .env"
+  echo "Making ... .env"
   cat - << ENV_EOF > .env
+# Please edit it according to your environment. 
+
+# https://hub.docker.com/r/itzg/minecraft-server/tags
+# S_TAG="java8"  # S_VERSION >= 1.7.10 && S_VERSION <= 1.16.5
+# S_TAG="java11" # S_VERSION >= 1.7.10 && S_VERSION <= 1.16.5
+# S_TAG="java16" # S_VERSION >= 1.17 && S_VERSION <= 1.17.1
+# S_TAG="java17" # S_VERSION >= 1.17 && S_VERSION <= 1.20.4
+# S_TAG="java21" # S_VERSION >= 1.20.5
 S_TAG="${DEFAULT_TAG}"
+
+# Container Name
 S_NAME="${DEFAULT_NAME}"
+
+# Time Zone
 S_TZ="${DEFAULT_TZ}"
+
+# Server Type "spigot", "paper"
 S_TYPE="${DEFAULT_TYPE}"
+
+# Server Version "1.21.4", "latest"
 S_VERSION="${DEFAULT_VERSION}"
+
+# Modrinth Projects
 S_MODRINTH="${DEFAULT_MODRINTH}"
+
+# Download Plugins URLs
+S_MODS="${DEFAULT_MODS}"
+
+# TCP 25565 for Java
 S_PORT="${DEFAULT_PORT}"
-S_OPERATOR="op Muscle_p"
+
+# UDP 19132 for Bedrock
+S_PORT_BE="${DEFAULT_PORT_BE}"
+
+# Command on Startup
+S_OPERATOR="op <player-name>"
 ENV_EOF
-  echo "please, check and edit your .env file."
-  exit
 fi
+
+# ---------------------------------------------------------
+# check operator
+# ---------------------------------------------------------
+while [ -n "$(sed -ne '/S_OPERATOR="op <player-name>"/p' .env)" ]; do
+  while read -p "Input player name: " MCID; do
+    if [ -z "${MCID}" ]; then
+      MCID="<player-name>"
+      break
+    fi
+    if checkMCID "${MCID}"; then
+      break
+    fi
+  done
+  sed -re "s/^S_OPERATOR=.*$/S_OPERATOR=\"op ${MCID}\"/" -i .env
+  sed -ne '/S_OPERATOR/p' .env
+done
 
 # ---------------------------------------------------------
 # update plugins
@@ -116,5 +183,4 @@ fi
 # launch minecraft server (CTRL+C to down)
 # ---------------------------------------------------------
 trap 'down' SIGINT
-docker compose up
-
+docker compose up && down
