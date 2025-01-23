@@ -23,14 +23,12 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
     public static NamespacedKey colourKey;
     public static NamespacedKey visKey;
-    private static int counter;
 
     public WorldeditSelectionViewer() {
         instance = this;
         worldedit = WorldEdit.getInstance();
         colourKey = NamespacedKey.fromString("selection-colour", this);
         visKey = NamespacedKey.fromString("selection-visibility", this);
-        counter = 0;
     }
 
     @Override
@@ -53,11 +51,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
         ShapeRenderer defaultRenderer = new ShapeRenderer();
         defaultRenderer.setColor(Color.YELLOW);
         defaultRenderer.setForceShow(true);
-        defaultRenderer.setStepSize(0.2);
-        defaultRenderer.setOptimize(true);
         Bukkit.getScheduler().runTaskTimerAsynchronously(instance, () -> {
-            counter++;
-            counter &= 3;
 
             Bukkit.getOnlinePlayers().forEach(p -> {
                 ShapeRenderer renderer = defaultRenderer;
@@ -122,9 +116,6 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
                 if (sel == null) return;
 
-                if (counter != 0) return;
-                // draw 1/4 freq.
-
                 renderer.setReceivers(p);
                 renderer.drawCuboid(
                     Util.asLocation(sel.getMinimumPoint(), p.getWorld()),
@@ -134,7 +125,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
             });
 
-        }, 0, 2);
+        }, 0, 8);
     }
 
     private void loadCommands() {
