@@ -38,6 +38,15 @@
                             <shadedPattern>com.funnyboyroks.worldeditselectionviewer</shadedPattern>
                         </relocation>
                     </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>*.*</artifact>
+                            <excludes>
+                            <exclude>module-info.class</exclude>
+                            <exclude>META-INF/MANIFEST.MF</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
                 <executions>
                     <execution>
