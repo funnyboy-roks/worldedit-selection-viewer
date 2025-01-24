@@ -1,34 +1,35 @@
 #!/bin/bash
+# ---------------------------------------------------------
+# Usage: ./run.sh [clean|update]
+# ---------------------------------------------------------
 
 # ---------------------------------------------------------
-# docker check
+# Define variables
 # ---------------------------------------------------------
-if ! docker version &> /dev/null; then
-  echo "please install docker."
-  echo "See: https://docs.docker.com/engine/install/"
-  exit 1
+COMPOSE_YML="compose.yml"
+INIT_ENV=".init"
+DOT_ENV=".env"
+LOG="last.log"
+if [ -f /etc/timezone ]; then
+  DEFAULT_TZ="$(cat /etc/timezone)"
+else
+  DEFAULT_TZ="Asia/Tokyo"
 fi
 
-if ! docker compose version &> /dev/null; then
-  echo "please install docker compose."
-  echo "See: https://docs.docker.com/compose/install/"
-  exit 1
-fi
-
 # ---------------------------------------------------------
-# down
+# Down function
 # ---------------------------------------------------------
 function down()
 {
-  if [ -f compose.yml ]; then
+  if [ -f "${COMPOSE_YML}" ] && docker compose version &> /dev/null; then
     docker compose stop
-    docker compose logs mc > last.log
+    docker compose logs mc > ${LOG}
     docker compose down
   fi
 }
 
 # ---------------------------------------------------------
-# check MCID
+# Check MCID function
 # ---------------------------------------------------------
 function checkMCID()
 {
@@ -46,114 +47,116 @@ function checkMCID()
 }
 
 # ---------------------------------------------------------
-# clean
+# Clean
 # ---------------------------------------------------------
 if [ "${1}" = "clean" ]; then
-  echo "clean..."
+  echo "Clean..."
   down
   rm -rf data-* plugins
-  rm -f .env compose.yml last.log
+  rm -f ${COMPOSE_YML} ${INIT_ENV} ${DOT_ENV} ${LOG}
   echo "done."
   exit
 fi
 
 # ---------------------------------------------------------
-# default parameters (do not edit)
+# Update plugins
 # ---------------------------------------------------------
-if [ -f /etc/timezone ]; then
-  DEFAULT_TZ="$(cat /etc/timezone)"
-else
-  DEFAULT_TZ="Asia/Tokyo"
+if [ "${1}" = "update" ]; then
+  echo "Update plugins..."
+  export ENV_FILE="${INIT_ENV}"
 fi
-DEFAULT_TAG="latest"
-DEFAULT_NAME="sandbox"
-DEFAULT_TYPE="paper"
-DEFAULT_VERSION="latest"
-DEFAULT_MODRINTH="viaversion,viabackwards,worldedit:beta,geyser:beta"
-DEFAULT_MODS="https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"
-DEFAULT_PORT="25565"
-DEFAULT_PORT_BE="19132"
 
 # ---------------------------------------------------------
-# generate compose.yml file
+# Generate the compose.yml file
 # ---------------------------------------------------------
-if [ ! -f compose.yml ]; then
-  echo "Making ... compose.yml"
-  cat - << COMPOSE_EOF > compose.yml
-# This is an automatically generated file.
-# You can edit it as needed.
+if [ ! -f "${COMPOSE_YML}" ]; then
+  echo "Generate ... ${COMPOSE_YML}"
+  cat - << COMPOSE_EOF > "${COMPOSE_YML}"
 services:
   mc:
-    image: "itzg/minecraft-server:\${S_TAG:-${DEFAULT_TAG}}"
-    container_name: "\${S_NAME:-${DEFAULT_NAME}}"
+    image: "itzg/minecraft-server:\${TAG}"
+    container_name: "sandbox"
     environment:
-      TZ: "\${S_TZ:-${DEFAULT_TZ}}"
+      TZ: "${DEFAULT_TZ}"
       EULA: "true"
-      TYPE: "\${S_TYPE:-${DEFAULT_TYPE}}"
-      VERSION: "\${S_VERSION:-${DEFAULT_VERSION}}"
+      SERVER_NAME: "Sandbox"
+      MOTD: "for worldedit-selection-viewer"
+      TYPE: "\${TYPE}"
+      VERSION: "\${VERSION}"
       MODE: "creative"
       FORCE_GAMEMODE: "true"
-      MODRINTH_PROJECTS: "\${S_MODRINTH:-${DEFAULT_MODRINTH}}"
-      MODS: "\${S_MODS:-${DEFAULT_MODS}}"
-      RCON_CMDS_STARTUP: "\${S_OPERATOR}"
+    env_file:
+      - "\${ENV_FILE:-${DOT_ENV}}"
     ports:
-      - "\${S_PORT:-${DEFAULT_PORT}}:25565"
-      - "\${S_PORT_BE:-${DEFAULT_PORT_BE}}:19132/udp"
+      - "25565:25565"
+      - "19132:19132/udp"
     volumes:
-      - ./data-\${S_TYPE:-${DEFAULT_TYPE}}-\${S_VERSION:-${DEFAULT_VERSION}}:/data
-      - ./plugins:/plugins:ro
+      - "./data-\${TYPE}-\${VERSION}:/data"
+      - "./plugins:/plugins:ro"
 COMPOSE_EOF
 fi
 
 # ---------------------------------------------------------
-# generate .env file
+# Generate the .init file. Used only on first startup.
 # ---------------------------------------------------------
-if [ ! -f .env ]; then
-  echo "Making ... .env"
-  cat - << ENV_EOF > .env
-# Please edit it according to your environment. 
+if [ ! -f "${INIT_ENV}" ]; then
+  echo "Generate ... ${INIT_ENV}"
+  cat - << INIT_EOF > "${INIT_ENV}"
+# Used only for the first time.
 
-# https://hub.docker.com/r/itzg/minecraft-server/tags
-# S_TAG="java8"  # S_VERSION >= 1.7.10 && S_VERSION <= 1.16.5
-# S_TAG="java11" # S_VERSION >= 1.7.10 && S_VERSION <= 1.16.5
-# S_TAG="java16" # S_VERSION >= 1.17 && S_VERSION <= 1.17.1
-# S_TAG="java17" # S_VERSION >= 1.17 && S_VERSION <= 1.20.4
-# S_TAG="java21" # S_VERSION >= 1.20.5
-S_TAG="${DEFAULT_TAG}"
+# Download plugins
+MODRINTH_PROJECTS="viaversion,viabackwards,worldedit:beta"
+PLUGINS="
+https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot
+https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot
+"
 
-# Container Name
-S_NAME="${DEFAULT_NAME}"
+# Configure convenient settings
+RCON_CMDS_STARTUP="op <player-name>
+gamerule doDaylightCycle false
+gamerule doWeatherCycle false
+time set noon
+weather clear"
+INIT_EOF
+fi
 
-# Time Zone
-S_TZ="${DEFAULT_TZ}"
+# ---------------------------------------------------------
+# Generate the .env file. Used on subsequent startups.
+# ---------------------------------------------------------
+if [ ! -f "${DOT_ENV}" ]; then
+  echo "Generate ... ${DOT_ENV}"
+  cat - << ENV_EOF > "${DOT_ENV}"
+# The .env file will be automatically loaded from docker compose.
+# From the second time onwards, it is also referenced as an environment variable within the container.
 
-# Server Type "spigot", "paper"
-S_TYPE="${DEFAULT_TYPE}"
+# Server type: "paper", "spigot"
+TYPE="paper"
 
-# Server Version "1.21.4", "latest"
-S_VERSION="${DEFAULT_VERSION}"
+# Server version: "latest", "1.21.4"
+VERSION="latest"
 
-# Modrinth Projects
-S_MODRINTH="${DEFAULT_MODRINTH}"
-
-# Download Plugins URLs
-S_MODS="${DEFAULT_MODS}"
-
-# TCP 25565 for Java
-S_PORT="${DEFAULT_PORT}"
-
-# UDP 19132 for Bedrock
-S_PORT_BE="${DEFAULT_PORT_BE}"
-
-# Command on Startup
-S_OPERATOR="op <player-name>"
+# image-tags: https://hub.docker.com/r/itzg/minecraft-server/tags
+# "java11" version 1.7.10 ~ 1.16.5
+# "java17" version 1.17 ~ 1.20.4
+# "java21" version 1.20.5 ~
+TAG="latest"
 ENV_EOF
 fi
 
 # ---------------------------------------------------------
-# check operator
+# Load env_file ".init" only for the first time. 
 # ---------------------------------------------------------
-while [ -n "$(sed -ne '/S_OPERATOR="op <player-name>"/p' .env)" ]; do
+source "${DOT_ENV}"
+
+if [ ! -d "./data-${TYPE}-${VERSION}" ]; then
+  echo "./data-${TYPE}-${VERSION} does not found. Initialize new version now."
+  export ENV_FILE="${INIT_ENV}"
+fi
+
+# ---------------------------------------------------------
+# Update operator player-name in env_file ".init".
+# ---------------------------------------------------------
+while [ -n "$(sed -ne '/op <player-name>/p' ${INIT_ENV})" ]; do
   while read -p "Input player name: " MCID; do
     if [ -z "${MCID}" ]; then
       MCID="<player-name>"
@@ -163,12 +166,11 @@ while [ -n "$(sed -ne '/S_OPERATOR="op <player-name>"/p' .env)" ]; do
       break
     fi
   done
-  sed -re "s/^S_OPERATOR=.*$/S_OPERATOR=\"op ${MCID}\"/" -i .env
-  sed -ne '/S_OPERATOR/p' .env
+  sed -re "s/op <player-name>/op ${MCID}/" -i "${INIT_ENV}"
 done
 
 # ---------------------------------------------------------
-# update plugins
+# Update local plugins
 # ---------------------------------------------------------
 mkdir -p plugins
 SRCS=($(ls -t ../target/worldedit-selection-viewer-*.jar))
@@ -177,6 +179,21 @@ if [ ${#SRCS} -gt 0 ]; then
 else
   echo "worldedit-selection-viewer-*.jar was not found."
   echo "Run \"(cd ..; mvn clean package)\", if you need."
+fi
+
+# ---------------------------------------------------------
+# Check if docker is enabled
+# ---------------------------------------------------------
+if ! docker version &> /dev/null; then
+  echo "please install docker."
+  echo "See: https://docs.docker.com/engine/install/"
+  exit 1
+fi
+
+if ! docker compose version &> /dev/null; then
+  echo "please install docker compose."
+  echo "See: https://docs.docker.com/compose/install/"
+  exit 1
 fi
 
 # ---------------------------------------------------------
