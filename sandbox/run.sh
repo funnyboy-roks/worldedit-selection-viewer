@@ -1,15 +1,12 @@
 #!/bin/bash
 # ---------------------------------------------------------
-# Usage: ./run.sh [clean|update]
-# ---------------------------------------------------------
-
-# ---------------------------------------------------------
 # Define variables
 # ---------------------------------------------------------
 COMPOSE_YML="compose.yml"
 INIT_ENV=".init"
 DOT_ENV=".env"
-LOG="last.log"
+LOG_FILE="last.log"
+WORK_FILES=("${COMPOSE_YML}" "${INIT_ENV}" "${DOT_ENV}" "${LOG_FILE}")
 if [ -f /etc/timezone ]; then
   DEFAULT_TZ="$(cat /etc/timezone)"
 else
@@ -23,7 +20,7 @@ function down()
 {
   if [ -f "${COMPOSE_YML}" ] && docker compose version &> /dev/null; then
     docker compose stop
-    docker compose logs mc > ${LOG}
+    docker compose logs mc > ${LOG_FILE}
     docker compose down
   fi
 }
@@ -47,24 +44,33 @@ function checkMCID()
 }
 
 # ---------------------------------------------------------
-# Clean
+# Parse command args: run.sh [clean|init|help]
 # ---------------------------------------------------------
-if [ "${1}" = "clean" ]; then
+case "${1}" in
+"")
+  ;;
+"clean")
   echo "Clean..."
   down
   rm -rf data-* plugins
-  rm -f ${COMPOSE_YML} ${INIT_ENV} ${DOT_ENV} ${LOG}
+  rm -f "${WORK_FILES[@]}"
   echo "done."
-  exit
-fi
-
-# ---------------------------------------------------------
-# Update plugins
-# ---------------------------------------------------------
-if [ "${1}" = "update" ]; then
-  echo "Update plugins..."
+  exit 0
+  ;;
+"init")
+  echo "Check update plugins..."
   export ENV_FILE="${INIT_ENV}"
-fi
+  ;;
+*)
+  cat - << USAGE_EOF
+Usage: $(basename ${0}) [options]
+options:
+    clean ... Clean all sandbox data.
+    init  ... Check update plugins.
+USAGE_EOF
+  exit 0
+  ;;
+esac
 
 # ---------------------------------------------------------
 # Generate the compose.yml file
@@ -149,7 +155,7 @@ fi
 source "${DOT_ENV}"
 
 if [ ! -d "./data-${TYPE}-${VERSION}" ]; then
-  echo "./data-${TYPE}-${VERSION} does not found. Initialize new version now."
+  echo "Detect new version. [${TYPE}-${VERSION}]"
   export ENV_FILE="${INIT_ENV}"
 fi
 
@@ -157,7 +163,7 @@ fi
 # Update operator player-name in env_file ".init".
 # ---------------------------------------------------------
 while [ -n "$(sed -ne '/op <player-name>/p' ${INIT_ENV})" ]; do
-  while read -p "Input player name: " MCID; do
+  while read -p "Input operator player name: " MCID; do
     if [ -z "${MCID}" ]; then
       MCID="<player-name>"
       break
