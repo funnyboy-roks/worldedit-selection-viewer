@@ -1,6 +1,7 @@
 # User-specific stuff
 .idea/
 .vscode/
+sandbox/.init
 sandbox/.env
 sandbox/compose.yml
 sandbox/last.log
