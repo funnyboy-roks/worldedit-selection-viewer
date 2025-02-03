@@ -24,7 +24,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
     public static NamespacedKey colourKey;
     public static NamespacedKey visKey;
-    //public static NamespacedKey refreshRateKey;
+    public static NamespacedKey refreshRateKey;
 
     private static int s_counter;
     private static final int MAX_COUNTER = 60;
@@ -40,7 +40,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
         worldedit = WorldEdit.getInstance();
         colourKey = NamespacedKey.fromString("selection-colour", this);
         visKey = NamespacedKey.fromString("selection-visibility", this);
-        //refreshRateKey = NamespacedKey.fromString("refresh-rate", this);
+        refreshRateKey = NamespacedKey.fromString("refresh-rate", this);
         s_counter = 0;
         defaultColour = Color.YELLOW;
         defaultVisibility = Visibility.HOLDING_TOOL;
@@ -109,7 +109,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
                 PersistentDataContainer pdc = p.getPersistentDataContainer();
 
                 int rate = defaultRefreshRate;
-                //if (pdc.has(refreshRateKey)) rate = pdc.get(refreshRateKey, PersistentDataType.INTEGER);
+                if (pdc.has(refreshRateKey)) rate = pdc.get(refreshRateKey, PersistentDataType.INTEGER);
                 if (s_counter % rate > 0) return;
 
                 Visibility vis = defaultVisibility;
