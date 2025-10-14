@@ -3,9 +3,9 @@
 A simple plugin with no config that adds particle borders for viewing one's
 selected [WorldEdit](https://enginehub.org/worldedit) region.
 
-_Note: While FAWE is not officially supported, it does seem to work_
+_Note: While [FAWE](https://modrinth.com/plugin/fastasyncworldedit/) is not officially supported, it does seem to work_
 
-![screenshot](https://raw.githubusercontent.com/funnyboy-roks/worldedit-selection-viewer/main/img/screenshot.gif)
+![screenshot](./img/screenshot.gif)
 
 ## Setup
 

@@ -6,7 +6,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
     - uses: actions/checkout@v3
-    - uses: funnyboy-roks/modrinth-auto-desc@v1.6
+    - uses: funnyboy-roks/modrinth-auto-desc@main
       with:
         auth-token: ${{ secrets.MODRINTH_AUTH_TOKEN }}
         slug: 'worldedit-selection-viewer'
