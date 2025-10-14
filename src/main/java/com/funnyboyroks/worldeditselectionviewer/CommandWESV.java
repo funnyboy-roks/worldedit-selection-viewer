@@ -1,5 +1,7 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
+import net.farlandsmc.componentutils.ComponentColor;
+import net.farlandsmc.componentutils.ComponentUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -27,19 +29,19 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "You must be in-game to run this command.");
+            sender.sendMessage(ComponentColor.red("You must be in-game to run this command."));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Usage: /wesv <visibility|colour> [...args]");
+            sender.sendMessage(ComponentColor.red("Usage: /wesv <visibility|colour> [...args]"));
             return true;
         }
 
         switch (args[0].toLowerCase()) {
             case "colour", "color" -> { // /wesv colour <colour|hex>
                 if (args.length != 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /wesv colour <colour|#hex>");
+                    sender.sendMessage(ComponentColor.red("Usage: /wesv colour <colour|#hex>"));
                     return true;
                 }
 
@@ -47,12 +49,12 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
                 try {
                     colour = Util.colourFromString(args[1]);
                 } catch (Exception e) {
-                    sender.sendMessage(ChatColor.RED + "Invalid colour.");
+                    sender.sendMessage(ComponentColor.red("Invalid colour."));
                     return true;
                 }
 
                 if (colour == null) {
-                    sender.sendMessage(ChatColor.RED + "Invalid colour.");
+                    sender.sendMessage(ComponentColor.red("Invalid colour."));
                     return true;
                 }
 
@@ -63,17 +65,15 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
                 Component humanNameComp;
 
                 if (humanName.startsWith("#")) {
-                    humanNameComp = Component.text(humanName, TextColor.color(colour.asRGB()));
+                    humanNameComp = ComponentColor.color(colour, humanName);
                 } else {
-                    humanNameComp = Component.text(humanName, TextColor.color(colour.asRGB()))
-                        .hoverEvent(HoverEvent.showText(Component.text(Util.colourToHex(colour))));
+                    humanNameComp = ComponentUtils.hover(
+                        ComponentColor.color(colour, humanName),
+                        Component.text(Util.colourToHex(colour))
+                    );
                 }
 
-                sender.sendMessage(
-                    Component.text("Updated colour to ", NamedTextColor.GREEN)
-                        .append(humanNameComp)
-                        .append(Component.text("!"))
-                );
+                sender.sendMessage(ComponentColor.green("Updated colour to {}!", humanNameComp));
             }
             case "visibility" -> { // /wesv visibility <always|never|...>
                 if (args.length != 2) {
@@ -92,11 +92,7 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
                 PersistentDataContainer pdc = player.getPersistentDataContainer();
                 pdc.set(WorldeditSelectionViewer.visKey, PersistentDataType.STRING, vis.name());
 
-                sender.sendMessage(
-                    Component.text("Updated selection visibility to ", NamedTextColor.GREEN)
-                        .append(Component.text(Util.fromEnumString(vis.name()), NamedTextColor.AQUA))
-                        .append(Component.text("!"))
-                );
+                sender.sendMessage(ComponentColor.green("Updated selection visibility to {:aqua}!", vis));
             }
             default -> {
                 return false;
@@ -132,13 +128,13 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
 
     public void printVisibilityUsage(CommandSender sender) {
         sender.sendMessage(
-            ChatColor.RED +
-            "Usage: /wesv visibility <" +
-            Arrays.stream(Visibility.values())
-                .map(Visibility::name)
-                .map(Util::fromEnumString)
-                .collect(Collectors.joining("|"))
-            + ">"
+            ComponentColor.red(
+                "Usage: /wesv visibility <{}>",
+                Arrays.stream(Visibility.values())
+                    .map(Visibility::name)
+                    .map(Util::fromEnumString)
+                    .collect(Collectors.joining("|"))
+            )
         );
     }
 
