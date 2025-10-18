@@ -4,10 +4,6 @@ main: com.funnyboyroks.worldeditselectionviewer.WorldeditSelectionViewer
 api-version: 1.19
 depend: [ 'WorldEdit' ]
 author: funnyboy_roks
-commands:
-  wesv:
-    usage: "§cUsage: /wesv <visibility|colour> [...args]"
-    permission: worldedit-selection-viewer.command
 permissions:
   worldedit-selection-viewer:
     children:

@@ -1,15 +1,26 @@
 package com.funnyboyroks.worldeditselectionviewer;
 
 import com.funnyboyroks.drawlib.renderer.ShapeRenderer;
-import com.funnyboyroks.worldeditselectionviewer.CommandWESV.Visibility;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.regions.Region;
+
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.farlandsmc.componentutils.ComponentColor;
+import net.farlandsmc.componentutils.ComponentUtils;
+import net.kyori.adventure.text.Component;
+
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,6 +35,9 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
     public static NamespacedKey colourKey;
     public static NamespacedKey visKey;
 
+    private static final Color DEFAULT_COLOUR = Color.YELLOW;
+    private static final Visibility DEFAULT_VISIBLITY = Visibility.HOLDING_TOOL;
+
     public WorldeditSelectionViewer() {
         instance = this;
         worldedit = WorldEdit.getInstance();
@@ -33,7 +47,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        Metrics metrics = new Metrics(this, 16995);
+        new Metrics(this, 16995);
 
         try {
             Util.isLatestVersion().thenAccept((latest) -> {
@@ -49,7 +63,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
         loadCommands();
 
         ShapeRenderer defaultRenderer = new ShapeRenderer();
-        defaultRenderer.setColor(Color.YELLOW);
+        defaultRenderer.setColor(DEFAULT_COLOUR);
         defaultRenderer.setForceShow(true);
         Bukkit.getScheduler().runTaskTimerAsynchronously(instance, () -> {
 
@@ -121,15 +135,145 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
                     Util.asLocation(sel.getMinimumPoint(), p.getWorld()),
                     Util.asLocation(sel.getMaximumPoint(), p.getWorld()).add(1, 1, 1)
                 );
-
-
             });
 
         }, 0, 2);
     }
 
+    private static int commandWesvColourExecutor(CommandContext<CommandSourceStack> ctx) {
+        final Color colour = ctx.getArgument("colour", Color.class);
+
+        Entity executor = ctx.getSource().getExecutor();
+        var sender = ctx.getSource().getSender();
+
+        if (!(executor instanceof Player player)) {
+            sender.sendPlainMessage("Only players may use this command.");
+            return Command.SINGLE_SUCCESS;
+        }
+
+        PersistentDataContainer pdc = player.getPersistentDataContainer();
+        pdc.set(WorldeditSelectionViewer.colourKey, PersistentDataType.STRING, Util.colourToString(colour));
+
+        String humanName = Util.colourToString(colour);
+        Component humanNameComp;
+
+        if (humanName.startsWith("#")) {
+            humanNameComp = ComponentColor.color(colour, humanName);
+        } else {
+            humanNameComp = ComponentUtils.hover(
+                ComponentColor.color(colour, humanName),
+                Component.text(Util.colourToHex(colour))
+            );
+        }
+
+        sender.sendMessage(ComponentColor.green("Updated colour to {}!", humanNameComp));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int commandWesvColourGetExecutor(CommandContext<CommandSourceStack> ctx) {
+        var sender = ctx.getSource().getSender();
+
+        if (!(ctx.getSource().getExecutor() instanceof Player player)) {
+            sender.sendPlainMessage("Only players may use this command.");
+            return Command.SINGLE_SUCCESS;
+        }
+
+        PersistentDataContainer pdc = player.getPersistentDataContainer();
+
+        Color c;
+        if (pdc.has(colourKey)) {
+            c = Util.colourFromString(pdc.get(colourKey, PersistentDataType.STRING));
+            if (c == null) c = DEFAULT_COLOUR;
+        } else {
+            c = DEFAULT_COLOUR;
+        }
+
+        String humanName = Util.colourToString(c);
+        Component humanNameComp;
+
+        if (humanName.startsWith("#")) {
+            humanNameComp = ComponentColor.color(c, humanName);
+        } else {
+            humanNameComp = ComponentUtils.hover(
+                ComponentColor.color(c, humanName),
+                Component.text(Util.colourToHex(c))
+            );
+        }
+
+        sender.sendMessage(ComponentColor.green("Colour is set to {}.", humanNameComp));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int commandVisibility(CommandContext<CommandSourceStack> ctx, Visibility vis) {
+        var sender = ctx.getSource().getSender();
+
+        if (!(ctx.getSource().getExecutor() instanceof Player player)) {
+            sender.sendPlainMessage("Only players may use this command.");
+            return Command.SINGLE_SUCCESS;
+        }
+
+        PersistentDataContainer pdc = player.getPersistentDataContainer();
+        pdc.set(WorldeditSelectionViewer.visKey, PersistentDataType.STRING, vis.name());
+
+        sender.sendMessage(ComponentColor.green("Updated selection visibility to {:aqua}!", vis));
+
+        return Command.SINGLE_SUCCESS;
+    }
+
     private void loadCommands() {
-        this.getCommand("wesv").setExecutor(new CommandWESV());
+        var commandWesv = Commands.literal("wesv")
+            .requires(p -> p.getSender().hasPermission("worldedit-selection-viewer.command"))
+            .then(
+                Commands.literal("colour").then(
+                    Commands.argument("colour", new ColourArgument())
+                        .executes(WorldeditSelectionViewer::commandWesvColourExecutor)
+                )
+                .executes(WorldeditSelectionViewer::commandWesvColourGetExecutor)
+            )
+            .then(
+                Commands.literal("color").then(
+                    Commands.argument("colour", new ColourArgument())
+                        .executes(WorldeditSelectionViewer::commandWesvColourExecutor)
+                )
+                .executes(WorldeditSelectionViewer::commandWesvColourGetExecutor)
+            )
+            .then(
+                Commands.literal("visibility")
+                .then(Commands.literal("always").executes(ctx -> WorldeditSelectionViewer.commandVisibility(ctx, Visibility.ALWAYS)))
+                .then(Commands.literal("never").executes(ctx -> WorldeditSelectionViewer.commandVisibility(ctx, Visibility.NEVER)))
+                .then(Commands.literal("holding-tool").executes(ctx -> WorldeditSelectionViewer.commandVisibility(ctx, Visibility.HOLDING_TOOL)))
+                .executes(ctx -> {
+                    var sender = ctx.getSource().getSender();
+
+                    if (!(ctx.getSource().getExecutor() instanceof Player player)) {
+                        sender.sendPlainMessage("Only players may use this command.");
+                        return Command.SINGLE_SUCCESS;
+                    }
+
+                    PersistentDataContainer pdc = player.getPersistentDataContainer();
+                    Visibility vis;
+                    if (pdc.has(visKey)) {
+                        String str = pdc.get(visKey, PersistentDataType.STRING);
+                        try {
+                            vis = Visibility.valueOf(str);
+                        } catch (IllegalArgumentException ex) {
+                            this.getLogger().warning("Visibility invalid: " + str);
+                            vis = DEFAULT_VISIBLITY;
+                        }
+                    } else {
+                        vis = DEFAULT_VISIBLITY;
+                    }
+
+                    sender.sendMessage(ComponentColor.green("Visibility is set to {:aqua}.", vis));
+
+                    return Command.SINGLE_SUCCESS;
+                })
+             )
+            .build();
+
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
+            commands.registrar().register(commandWesv, "Configure worldedit-selection-viewer");
+        });
     }
 
     @Override
@@ -137,4 +281,7 @@ public final class WorldeditSelectionViewer extends JavaPlugin {
 
     }
 
+    public enum Visibility {
+        ALWAYS, NEVER, HOLDING_TOOL
+    }
 }
