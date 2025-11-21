@@ -6,7 +6,7 @@ jobs:
   modrinth-desc:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: funnyboy-roks/modrinth-auto-desc@main
       with:
         auth-token: ${{ secrets.MODRINTH_AUTH_TOKEN }}
