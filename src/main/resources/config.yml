@@ -1,0 +1,6 @@
+default-color: yellow
+default-visibility: holding-tool
+
+refresh-rate: 2
+step-size: 0.1
+optimise-lines: false

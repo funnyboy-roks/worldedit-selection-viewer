@@ -94,6 +94,24 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(ComponentColor.green("Updated selection visibility to {:aqua}!", vis));
             }
+            case "refresh-rate" -> {    // /wesv refresh-rate <1-60>
+                if (args.length != 2) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /wesv refresh-rate <1-60>");
+                    return true;
+                }
+                int rate = Integer.parseInt(args[1]);
+                if (rate < 1 || rate > 60) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /wesv refresh-rate <1-60>");
+                    return true;
+                }
+                PersistentDataContainer pdc = player.getPersistentDataContainer();
+                pdc.set(WorldeditSelectionViewer.refreshRateKey, PersistentDataType.INTEGER, rate);
+
+                sender.sendMessage(
+                    Component.text("Updated refresh-rate to " + rate, NamedTextColor.GREEN)
+                    .append(Component.text("!"))
+                );
+            }
             default -> {
                 return false;
             }
@@ -105,7 +123,7 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         return switch (args.length) {
-            case 1 -> Stream.of("colour", "color", "visibility")
+            case 1 -> Stream.of("colour", "color", "visibility", "refresh-rate")
                 .filter(s -> s.startsWith(args[0].toLowerCase()))
                 .toList();
             case 2 -> switch (args[0]) {
@@ -119,6 +137,8 @@ public class CommandWESV implements CommandExecutor, TabCompleter {
                     .map(Util::fromEnumString)
                     .filter(s -> s.startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
+
+                case "refresh-rate" -> Collections.emptyList();
 
                 default -> Collections.emptyList();
             };
